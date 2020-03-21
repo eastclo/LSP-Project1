@@ -42,7 +42,7 @@ struct ssu_scoreTable{
 
 void ssu_score(int argc, char *argv[]);
 int check_option(int argc, char *argv[]);
-void print_usage();
+void print_usage();	//print program manual option '-h'
 
 void score_students();
 double score_student(int fd, char *id);
