@@ -34,33 +34,35 @@ void ssu_score(int argc, char *argv[])
 	int i;
 
 	for(i = 0; i < argc; i++){
-		if(!strcmp(argv[i], "-h")){
+		if(!strcmp(argv[i], "-h")){	//if there is '-h' option, print manual and exit ssu_score.
 			print_usage();
 			return;
 		}
 	}
 
-	memset(saved_path, 0, BUFLEN);
-	if(argc >= 3 && strcmp(argv[1], "-c") != 0){
-		strcpy(stuDir, argv[1]);
-		strcpy(ansDir, argv[2]);
-	}
+	memset(saved_path, 0, BUFLEN);	//initialize local parameter
+//	if(argc >= 3 && strcmp(argv[1], "-c") != 0){	//c옵션 아니고 인자 3개이상
+	/******TODO EXCEPTION*******/
+	strcpy(stuDir, argv[1]);
+	strcpy(ansDir, argv[2]);
+//	}
 
-	if(!check_option(argc, argv))
+	if(!check_option(argc, argv))	//if it is out of form, throw exception.
 		exit(1);
-
+/*
 	if(!eOption && !tOption && !pOption && cOption){
 		do_cOption(cIDs);
 		return;
 	}
+*/
+	/*******Initialize parameter : stuDir, ansDir, saved_path**********/
+	getcwd(saved_path, BUFLEN);	//get current working space
 
-	getcwd(saved_path, BUFLEN);
-
-	if(chdir(stuDir) < 0){
+	if(chdir(stuDir) < 0){	//change directory
 		fprintf(stderr, "%s doesn't exist\n", stuDir);
 		return;
 	}
-	getcwd(stuDir, BUFLEN);
+	getcwd(stuDir, BUFLEN);	
 
 	chdir(saved_path);
 	if(chdir(ansDir) < 0){
@@ -70,16 +72,18 @@ void ssu_score(int argc, char *argv[])
 	getcwd(ansDir, BUFLEN);
 
 	chdir(saved_path);
+	////////////////////////////////////////////////////////////////////
 
-	set_scoreTable(ansDir);
-	set_idTable(stuDir);
+	set_scoreTable(ansDir);	//set score table
+	set_idTable(stuDir);	//set scoring result table
 
 	printf("grading student's test papers..\n");
-	score_students();
+	score_students();	//calculate score
 
+	/*
 	if(cOption)
 		do_cOption(cIDs);
-
+*/
 	return;
 }
 

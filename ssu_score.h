@@ -41,7 +41,7 @@ struct ssu_scoreTable{
 };
 
 void ssu_score(int argc, char *argv[]);
-int check_option(int argc, char *argv[]);
+int check_option(int argc, char *argv[]); //if it is out of form, throw exception.
 void print_usage();	//print program manual option '-h'
 
 void score_students();
