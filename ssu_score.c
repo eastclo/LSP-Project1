@@ -266,26 +266,8 @@ void make_scoreTable(char *curDir) //score_table 배열에 문제별 점수를 �
 	{
 		if(!strcmp(dirp->d_name, ".") || !strcmp(dirp->d_name, ".."))
 			continue;
-/*
-		sprintf(tmp, "%s/%s", ansDir, dirp->d_name);
 
-		if((c_dp = opendir(tmp)) == NULL){
-			fprintf(stderr, "open dir error for %s\n", tmp);
-			return;
-		}
-
-		while((c_dirp = readdir(c_dp)) != NULL)
-		{
-			if(!strcmp(c_dirp->d_name, ".") || !strcmp(c_dirp->d_name, ".."))
-				continue;
-
-			if((type = get_file_type(c_dirp->d_name)) < 0)
-				continue;
-*/
 		strcpy(score_table[idx++].qname, dirp->d_name);
-//		}
-
-//		closedir(c_dp);
 	}
 
 	closedir(dp);
@@ -326,11 +308,7 @@ void write_scoreTable(char *filename) //score_table.csv 생성
 
 	for(i = 0; i < num; i++)
 	{
-	/**TODO 0점 예외처리, 유효숫자 처리****/
-		if(score_table[i].score == 0)
-			break;
-
-		sprintf(tmp, "%s,%.2f\n", score_table[i].qname, score_table[i].score);
+		sprintf(tmp, "%s,%.2f\n", score_table[i].qname, score_table[i].score); //문제, 점수 작성
 		write(fd, tmp, strlen(tmp));
 	}
 
