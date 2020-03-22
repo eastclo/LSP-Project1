@@ -78,7 +78,7 @@ void ssu_score(int argc, char *argv[])
 	set_idTable(saved_path);	//set scoring result table
 
 	printf("grading student's test papers..\n");
-//	score_students();	//calculate score
+	score_students();	//calculate score
 
 	/*
 	if(cOption)
@@ -316,7 +316,7 @@ void write_scoreTable(char *filename) //score_table.csv 생성
 }
 
 
-void set_idTable(char *stuDir)
+void set_idTable(char *stuDir) //id_table변수에 학번 저장
 {
 	struct stat statbuf;
 	struct dirent *dirp;
@@ -333,26 +333,27 @@ void set_idTable(char *stuDir)
 		if(!strcmp(dirp->d_name, ".") || !strcmp(dirp->d_name, ".."))
 			continue;
 
-		sprintf(tmp, "%s/%s", stuDir, dirp->d_name);
-		stat(tmp, &statbuf);
+		sprintf(tmp, "%s/%s", stuDir, dirp->d_name); //학번 디렉토리 경로 저장
+		stat(tmp, &statbuf); //statbuf에 해당 파일의 정보를 복사
 
-		if(S_ISDIR(statbuf.st_mode))
-			strcpy(id_table[num++], dirp->d_name);
+		if(S_ISDIR(statbuf.st_mode)) //해당 폴더가 디렉토리면
+			strcpy(id_table[num++], dirp->d_name); //id_table에 학번 저장
 		else
 			continue;
 	}
 
-	sort_idTable(num);
+	sort_idTable(num); 
 }
 
-void sort_idTable(int size)
+void sort_idTable(int size) //학번 오름차순으로 정렬
 {
 	int i, j;
 	char tmp[10];
 
+	//버블 정렬
 	for(i = 0; i < size - 1; i++){
 		for(j = 0; j < size - 1 -i; j++){
-			if(strcmp(id_table[j], id_table[j+1]) > 0){
+			if(strcmp(id_table[j], id_table[j+1]) > 0){ //오름차순
 				strcpy(tmp, id_table[j]);
 				strcpy(id_table[j], id_table[j+1]);
 				strcpy(id_table[j+1], tmp);

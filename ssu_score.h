@@ -70,10 +70,10 @@ void set_scoreTable(char *curDir); //set scoreTable.
 void read_scoreTable(char *path); //score_table.csv에 적힌 문제별 점수를 score_table 배열에 저장
 void make_scoreTable(char *curDir); //score_table 배열에 문제별 점수를 저장
 void write_scoreTable(char *filename); //score_table.csv 생성
-void set_idTable(char *stuDir);
+void set_idTable(char *stuDir); //id_table변수에 학번 저장
 int get_create_type(); //점수 테이블을 어떻게 생성할건지 묻는 질문
 
-void sort_idTable(int size);
+void sort_idTable(int size); //id_table변수 오름차순으로 정렬
 void sort_scoreTable(int size); //점수테이블을 문제번호 오름차순으로 정렬
 void get_qname_number(char *qname, int *num1, int *num2); //문제 번호 리턴
 
