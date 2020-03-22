@@ -74,11 +74,11 @@ void ssu_score(int argc, char *argv[])
 	chdir(saved_path);
 	////////////////////////////////////////////////////////////////////
 
-	set_scoreTable(ansDir);	//set score table
-	set_idTable(stuDir);	//set scoring result table
+	set_scoreTable(saved_path);	//set score table
+	set_idTable(saved_path);	//set scoring result table
 
 	printf("grading student's test papers..\n");
-	score_students();	//calculate score
+//	score_students();	//calculate score
 
 	/*
 	if(cOption)
@@ -196,51 +196,57 @@ int is_exist(char (*src)[FILELEN], char *target)
 	return false;
 }
 
-void set_scoreTable(char *ansDir)
+void set_scoreTable(char *curDir) //set score table
 {
 	char filename[FILELEN];
 
-	sprintf(filename, "%s/%s", ansDir, "score_table.csv");
+	sprintf(filename, "%s/%s", curDir, "score_table.csv");
 
-	if(access(filename, F_OK) == 0)
+	if(access(filename, F_OK) == 0) //if there is the accessible file already exist.
 		read_scoreTable(filename);
 	else{
-		make_scoreTable(ansDir);
+		make_scoreTable(curDir);
 		write_scoreTable(filename);
 	}
 }
 
-void read_scoreTable(char *path)
+void read_scoreTable(char *path) //score_table.csv에 적힌 문제별 점수를 score_table 배열에 저장 
 {
 	FILE *fp;
 	char qname[FILELEN];
 	char score[BUFLEN];
 	int idx = 0;
 
-	if((fp = fopen(path, "r")) == NULL){
+	if((fp = fopen(path, "r")) == NULL){ //file open readonly option.
 		fprintf(stderr, "file open error for %s\n", path);
 		return ;
 	}
 
 	while(fscanf(fp, "%[^,],%s\n", qname, score) != EOF){
-		strcpy(score_table[idx].qname, qname);
-		score_table[idx++].score = atof(score);
+		strcpy(score_table[idx].qname, qname); //save question name
+		score_table[idx++].score = atof(score); //save score
 	}
 
 	fclose(fp);
 }
 
-void make_scoreTable(char *ansDir)
+void make_scoreTable(char *curDir) //score_table 배열에 문제별 점수를 저장 
 {
 	int type, num;
 	double score, bscore, pscore;
-	struct dirent *dirp, *c_dirp;
-	DIR *dp, *c_dp;
+	struct dirent *dirp, *c_dirpl;
+/*	{
+		long d_ino	//i-node number
+		off_t d_off //offset
+		unsigned short d_reclen //length of file name
+		char d_name[NAME_MAX+1] //file name
+	 }  */
+	DIR *dp, *c_dp;	//directory stream pointer
 	char tmp[BUFLEN];
 	int idx = 0;
 	int i;
 
-	num = get_create_type();
+	num = get_create_type(); //각 문제마다 점수를 책정할지, 빈칸/프로그램로 점수를 책정할지 결정. 
 
 	if(num == 1)
 	{
@@ -250,16 +256,17 @@ void make_scoreTable(char *ansDir)
 		scanf("%lf", &pscore);
 	}
 
-	if((dp = opendir(ansDir)) == NULL){
+
+	if((dp = opendir(ansDir)) == NULL){	//get directory stream pointer
 		fprintf(stderr, "open dir error for %s\n", ansDir);
 		return;
 	}	
 
-	while((dirp = readdir(dp)) != NULL)
+	while((dirp = readdir(dp)) != NULL) //디렉토리 내 파일 목록을 순회함.
 	{
 		if(!strcmp(dirp->d_name, ".") || !strcmp(dirp->d_name, ".."))
 			continue;
-
+/*
 		sprintf(tmp, "%s/%s", ansDir, dirp->d_name);
 
 		if((c_dp = opendir(tmp)) == NULL){
@@ -274,15 +281,15 @@ void make_scoreTable(char *ansDir)
 
 			if((type = get_file_type(c_dirp->d_name)) < 0)
 				continue;
+*/
+		strcpy(score_table[idx++].qname, dirp->d_name);
+//		}
 
-			strcpy(score_table[idx++].qname, c_dirp->d_name);
-		}
-
-		closedir(c_dp);
+//		closedir(c_dp);
 	}
 
 	closedir(dp);
-	sort_scoreTable(idx);
+	sort_scoreTable(idx);	//문제 번호순서대로 정렬
 
 	for(i = 0; i < idx; i++)
 	{
@@ -290,9 +297,9 @@ void make_scoreTable(char *ansDir)
 
 		if(num == 1)
 		{
-			if(type == TEXTFILE)
+			if(type == TEXTFILE)	//텍스트 파일이면 빈칸 문제
 				score = bscore;
-			else if(type == CFILE)
+			else if(type == CFILE) //c파일이면 프로그램 문제
 				score = pscore;
 		}
 		else if(num == 2)
@@ -305,20 +312,21 @@ void make_scoreTable(char *ansDir)
 	}
 }
 
-void write_scoreTable(char *filename)
+void write_scoreTable(char *filename) //score_table.csv 생성
 {
 	int fd;
 	char tmp[BUFLEN];
 	int i;
 	int num = sizeof(score_table) / sizeof(score_table[0]);
 
-	if((fd = creat(filename, 0666)) < 0){
+	if((fd = creat(filename, 0666)) < 0){ //score_table.csv 생성
 		fprintf(stderr, "creat error for %s\n", filename);
 		return;
 	}
 
 	for(i = 0; i < num; i++)
 	{
+	/**TODO 0점 예외처리, 유효숫자 처리****/
 		if(score_table[i].score == 0)
 			break;
 
@@ -375,13 +383,14 @@ void sort_idTable(int size)
 	}
 }
 
-void sort_scoreTable(int size)
+void sort_scoreTable(int size) //문제 번호 오름차순으로 정렬
 {
 	int i, j;
 	struct ssu_scoreTable tmp;
 	int num1_1, num1_2;
 	int num2_1, num2_2;
 
+	//버블정렬
 	for(i = 0; i < size - 1; i++){
 		for(j = 0; j < size - 1 - i; j++){
 
@@ -390,7 +399,7 @@ void sort_scoreTable(int size)
 
 
 			if((num1_1 > num2_1) || ((num1_1 == num2_1) && (num1_2 > num2_2))){
-
+				//j와 j+1번째 위치 변경.
 				memcpy(&tmp, &score_table[j], sizeof(score_table[0]));
 				memcpy(&score_table[j], &score_table[j+1], sizeof(score_table[0]));
 				memcpy(&score_table[j+1], &tmp, sizeof(score_table[0]));
@@ -399,28 +408,28 @@ void sort_scoreTable(int size)
 	}
 }
 
-void get_qname_number(char *qname, int *num1, int *num2)
+void get_qname_number(char *qname, int *num1, int *num2) //문제 번호 리턴
 {
 	char *p;
 	char dup[FILELEN];
 
-	strncpy(dup, qname, strlen(qname));
-	*num1 = atoi(strtok(dup, "-."));
+	strncpy(dup, qname, strlen(qname)); //문자열 길이만큼만 복사(strcpy를 쓰면 FILELEN만큼 복사하여 효율x)
+	*num1 = atoi(strtok(dup, "-.")); //"-."기준으로 문자열 dup 분리.
 	
-	p = strtok(NULL, "-.");
+	p = strtok(NULL, "-."); //NULL이 들어오면 이전에 분리된 부분 부터 문자열 분리.
 	if(p == NULL)
 		*num2 = 0;
 	else
 		*num2 = atoi(p);
 }
 
-int get_create_type()
+int get_create_type() //점수 테이블 생성 질문
 {
 	int num;
 
 	while(1)
 	{
-		printf("score_table.csv file doesn't exist in TREUDIR!\n");
+		printf("score_table.csv file doesn't exist!\n");
 		printf("1. input blank question and program question's score. ex) 0.5 1\n");
 		printf("2. input all question's score. ex) Input value of 1-1: 0.1\n");
 		printf("select type >> ");
@@ -919,9 +928,9 @@ void redirection(char *command, int new, int old)
 	close(saved);
 }
 
-int get_file_type(char *filename)
+int get_file_type(char *filename)	//get file type : c or txt
 {
-	char *extension = strrchr(filename, '.');
+	char *extension = strrchr(filename, '.'); //문자열에서 해당 문자가 마지막으로 나타나는 위치 포인터 리턴
 
 	if(!strcmp(extension, ".txt"))
 		return TEXTFILE;
