@@ -10,6 +10,7 @@
 #include <sys/stat.h>
 #include "ssu_score.h"
 #include "blank.h"
+#define DEBUG 1
 
 extern struct ssu_scoreTable score_table[QNUM];
 extern char id_table[SNUM][10];
@@ -47,8 +48,8 @@ void ssu_score(int argc, char *argv[]) //사실상 메인함수
 	strcpy(ansDir, argv[2]);
 //	}
 
-	if(!check_option(argc, argv))	//if it is out of form, throw exception.
-		exit(1);
+//	if(!check_option(argc, argv))	//if it is out of form, throw exception.
+//		exit(1);
 /*
 	if(!eOption && !tOption && !pOption && cOption){
 		do_cOption(cIDs);
@@ -57,7 +58,6 @@ void ssu_score(int argc, char *argv[]) //사실상 메인함수
 */
 	/*******Initialize parameter : stuDir, ansDir, saved_path**********/
 	getcwd(saved_path, BUFLEN);	//get current working space
-
 	if(chdir(stuDir) < 0){	//change directory
 		fprintf(stderr, "%s doesn't exist\n", stuDir);
 		return;
@@ -75,7 +75,7 @@ void ssu_score(int argc, char *argv[]) //사실상 메인함수
 	////////////////////////////////////////////////////////////////////
 
 	set_scoreTable(saved_path);	//set score table
-	set_idTable(saved_path);	//set scoring result table
+	set_idTable();	//set scoring result table
 
 	printf("grading student's test papers..\n");
 	score_students();	//calculate score
@@ -316,7 +316,7 @@ void write_scoreTable(char *filename) //score_table.csv 생성
 }
 
 
-void set_idTable(char *stuDir) //id_table변수에 학번 저장
+void set_idTable() //id_table변수에 학번 저장
 {
 	struct stat statbuf;
 	struct dirent *dirp;
@@ -482,7 +482,7 @@ double score_student(int fd, char *id) //학생별 점수 계산, 해당 학생 
 				result = score_program(id, score_table[i].qname); //c파일이면 프로그램문제 채점
 		}
 
-		if(result == false) //제출하지 않은 파일은 0점
+		if(result == false) //0점
 			write(fd, "0,", 2);
 		else{
 			if(result == true){ //채점 점수 입력
@@ -499,6 +499,7 @@ double score_student(int fd, char *id) //학생별 점수 계산, 해당 학생 
 
 	sprintf(tmp, "%.2f\n", score); //마지막에 총점 입력
 	write(fd, tmp, strlen(tmp));
+	printf("%s is finished.. score : %.2lf\n", id, score); //학생 점수 출력 
 
 	return score;
 }
@@ -664,7 +665,7 @@ double score_program(char *id, char *filename) //TODO
 		return false;
 
 	if(compile < 0) //컴파일시 warning은 -0.1점
-		return compile;
+		return compile; 
 
 	return true;
 }
@@ -753,7 +754,7 @@ double compile_program(char *id, char *filename) //프로그램 문제 컴파일
 	return true;
 }
 
-double check_error_warning(char *filename)
+double check_error_warning(char *filename) //에러면 0점, warning이면 감점된 점수 리턴
 {
 	FILE *fp;
 	char tmp[BUFLEN];
@@ -761,22 +762,22 @@ double check_error_warning(char *filename)
 
 	if((fp = fopen(filename, "r")) == NULL){
 		fprintf(stderr, "fopen error for %s\n", filename);
-		return false;
+		return false;  //에러가 있으나 열리지 않음
 	}
 
 	while(fscanf(fp, "%s", tmp) > 0){
-		if(!strcmp(tmp, "error:"))
-			return ERROR;
-		else if(!strcmp(tmp, "warning:"))
-			warning += WARNING;
+		if(strstr(tmp, "error:")!=NULL)
+			return ERROR; //error가 있으면 0리턴
+		else if(strstr(tmp, "warning:")!=NULL)
+			warning += WARNING; //warning당 0.1점 감점
 	}
 
 	return warning;
 }
 
-int execute_program(char *id, char *filename)
+int execute_program(char *id, char *filename) //학생답안과 정답을 실행하는 함수
 {
-	char std_fname[BUFLEN], ans_fname[BUFLEN];
+	char std_fname[BUFLEN], ans_fname[BUFLEN]; //실행 결과가 기록될 파일
 	char tmp[BUFLEN];
 	char qname[FILELEN];
 	time_t start, end;
@@ -784,40 +785,40 @@ int execute_program(char *id, char *filename)
 	int fd;
 
 	memset(qname, 0, sizeof(qname));
-	memcpy(qname, filename, strlen(filename) - strlen(strrchr(filename, '.')));
+	memcpy(qname, filename, strlen(filename) - strlen(strrchr(filename, '.'))); //확장자를 제거한 문제 이름을 저장
 
-	sprintf(ans_fname, "%s/%s/%s.stdout", ansDir, qname, qname);
+	sprintf(ans_fname, "%s/%s.stdout", ansDir, qname); //정답 실행결과를 저장할 파일 생성
 	fd = creat(ans_fname, 0666);
 
-	sprintf(tmp, "%s/%s/%s.exe", ansDir, qname, qname);
-	redirection(tmp, fd, STDOUT);
+	sprintf(tmp, "%s/%s.exe", ansDir, qname); //정답 실행결과를 ans_fname에 저장
+	redirection(tmp, fd, STDOUT); //표준출력을  ans_fname에 출력하도록 변경
 	close(fd);
 
-	sprintf(std_fname, "%s/%s/%s.stdout", stuDir, id, qname);
+	sprintf(std_fname, "%s/%s/%s.stdout", stuDir, id, qname); //학생 정답 실행 결과를 저장할 파일 생성
 	fd = creat(std_fname, 0666);
 
-	sprintf(tmp, "%s/%s/%s.stdexe &", stuDir, id, qname);
+	sprintf(tmp, "%s/%s/%s.stdexe &", stuDir, id, qname); //백그라운드 프로세스로 학생 정답파일 실행
 
-	start = time(NULL);
-	redirection(tmp, fd, STDOUT);
+	start = time(NULL); //프로그램 실행 시작시간 기록 
+	redirection(tmp, fd, STDOUT); //실행하여 std_fname에 결과 저장
 	
-	sprintf(tmp, "%s.stdexe", qname);
-	while((pid = inBackground(tmp)) > 0){
+	sprintf(tmp, "%s.stdexe", qname); 
+	while((pid = inBackground(tmp)) > 0){ //프로세스가 계속 실행 중 인지 체크
 		end = time(NULL);
 
-		if(difftime(end, start) > OVER){
-			kill(pid, SIGKILL);
+		if(difftime(end, start) > OVER){ //실행시간이 5초가 넘어가면
+			kill(pid, SIGKILL); //해당 프로세스 종료 후
 			close(fd);
-			return false;
+			return false; //0점 리턴
 		}
 	}
 
 	close(fd);
 
-	return compare_resultfile(std_fname, ans_fname);
+	return compare_resultfile(std_fname, ans_fname); //정답과 학생답안 비교
 }
 
-pid_t inBackground(char *name)
+pid_t inBackground(char *name) //name실행파일이 백그라운드에서 아직 실행 중인지 확인
 {
 	pid_t pid;
 	char command[64];
@@ -826,58 +827,58 @@ pid_t inBackground(char *name)
 	off_t size;
 	
 	memset(tmp, 0, sizeof(tmp));
-	fd = open("background.txt", O_RDWR | O_CREAT | O_TRUNC, 0666);
+	fd = open("background.txt", O_RDWR | O_CREAT | O_TRUNC, 0666); //ps | grep 명령어 결과 저장할 임시 파일
 
 	sprintf(command, "ps | grep %s", name);
-	redirection(command, fd, STDOUT);
+	redirection(command, fd, STDOUT); //파일에 명령어 결과 저장
 
 	lseek(fd, 0, SEEK_SET);
 	read(fd, tmp, sizeof(tmp));
 
-	if(!strcmp(tmp, "")){
-		unlink("background.txt");
+	if(!strcmp(tmp, "")){ //프로세스가 실행중이지 않으면
+		unlink("background.txt"); //임시 파일 삭제후
 		close(fd);
-		return 0;
+		return 0; //0이하 값 리턴하면 된다
 	}
 
-	pid = atoi(strtok(tmp, " "));
+	pid = atoi(strtok(tmp, " ")); //ps명령어는 "PID ~~"이므로 공백을 기준으로 쪼개면 pid가 나온다
 	close(fd);
 
 	unlink("background.txt");
-	return pid;
+	return pid; //프로세스 번호 리턴
 }
 
-int compare_resultfile(char *file1, char *file2)
+int compare_resultfile(char *file1, char *file2) //학생 답안과 정답 결과 비교하여 채점
 {
 	int fd1, fd2;
 	char c1, c2;
 	int len1, len2;
 
-	fd1 = open(file1, O_RDONLY);
-	fd2 = open(file2, O_RDONLY);
+	fd1 = open(file1, O_RDONLY); //학생 답안 실행 결과
+	fd2 = open(file2, O_RDONLY); //정답 실행 결과
 
-	while(1)
+	while(1) //대소문자와 공백 구분하지 않고 채점
 	{
 		while((len1 = read(fd1, &c1, 1)) > 0){
-			if(c1 == ' ') 
+			if(c1 == ' ')  //공백이면 패스
 				continue;
 			else 
 				break;
 		}
 		while((len2 = read(fd2, &c2, 1)) > 0){
-			if(c2 == ' ') 
+			if(c2 == ' ')  //공백이면 패스
 				continue;
 			else 
 				break;
 		}
 		
-		if(len1 == 0 && len2 == 0)
+		if(len1 == 0 && len2 == 0) //둘 다 더이상 읽을게 없으면 루프 종료 후 true리턴
 			break;
 
-		to_lower_case(&c1);
-		to_lower_case(&c2);
+		to_lower_case(&c1); //대소문자 구분하지 않기 위해
+		to_lower_case(&c2); //소문자로 변경
 
-		if(c1 != c2){
+		if(c1 != c2){ //답이 다르면 0점
 			close(fd1);
 			close(fd2);
 			return false;
@@ -895,7 +896,7 @@ void redirection(char *command, int new, int old)//stdout, stderr를 화면에 �
 	saved = dup(old);
 	dup2(new, old);
 
-	system(command);
+	system(command); //command 실행
 
 	dup2(saved, old);
 	close(saved);
@@ -943,7 +944,7 @@ void rmdirs(const char *path)
 	rmdir(path);
 }
 
-void to_lower_case(char *c)
+void to_lower_case(char *c) //대문자를 소문자로 변경
 {
 	if(*c >= 'A' && *c <= 'Z')
 		*c = *c + 32;
