@@ -40,18 +40,18 @@ struct ssu_scoreTable{
 	double score;
 };
 
-void ssu_score(int argc, char *argv[]);
+void ssu_score(int argc, char *argv[]); //사실상 메인함수
 int check_option(int argc, char *argv[]); //if it is out of form, throw exception.
 void print_usage();	//print program manual option '-h'
 
-void score_students();
-double score_student(int fd, char *id);
-void write_first_row(int fd);
+void score_students(); //학생 점수 채점(채점 결과 테이블 작성)
+double score_student(int fd, char *id); //학생별 점수 계산, 해당 학생 총 점수 리턴
+void write_first_row(int fd); //채점 결과 테이블의 첫 행 채우기
 
 char *get_answer(int fd, char *result);
-int score_blank(char *id, char *filename);
-double score_program(char *id, char *filename);
-double compile_program(char *id, char *filename);
+int score_blank(char *id, char *filename); //빈칸문제 채점 시작
+double score_program(char *id, char *filename); //프로그램 문제 채점 시작
+double compile_program(char *id, char *filename); //프로그램 문제 컴파일
 int execute_program(char *id, char *filname);
 pid_t inBackground(char *name);
 double check_error_warning(char *filename);
@@ -61,7 +61,7 @@ void do_cOption(char (*ids)[FILELEN]);
 int is_exist(char (*src)[FILELEN], char *target);
 
 int is_thread(char *qname);
-void redirection(char *command, int newfd, int oldfd);
+void redirection(char *command, int newfd, int oldfd); //command실행시 stdout, stderr를 화면에 출력하지 않기 위해 사용
 int get_file_type(char *filename); //get file type : .c or .txt
 void rmdirs(const char *path);
 void to_lower_case(char *c);

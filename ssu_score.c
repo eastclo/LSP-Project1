@@ -17,8 +17,8 @@ extern char id_table[SNUM][10];
 struct ssu_scoreTable score_table[QNUM];
 char id_table[SNUM][10];
 
-char stuDir[BUFLEN];
-char ansDir[BUFLEN];
+char stuDir[BUFLEN]; //학생폴더
+char ansDir[BUFLEN]; //정답폴더
 char errorDir[BUFLEN];
 char threadFiles[ARGNUM][FILELEN];
 char cIDs[ARGNUM][FILELEN];
@@ -28,7 +28,7 @@ int tOption = false;
 int pOption = false;
 int cOption = false;
 
-void ssu_score(int argc, char *argv[])
+void ssu_score(int argc, char *argv[]) //사실상 메인함수
 {
 	char saved_path[BUFLEN];
 	int i;
@@ -423,74 +423,73 @@ int get_create_type() //점수 테이블 생성 질문
 	return num;
 }
 
-void score_students()
+void score_students() //학생 점수 채점(채점 결과 테이블 작성)
 {
 	double score = 0;
 	int num;
 	int fd;
 	char tmp[BUFLEN];
-	int size = sizeof(id_table) / sizeof(id_table[0]);
+	int size = sizeof(id_table) / sizeof(id_table[0]); //SNUM==100
 
-	if((fd = creat("score.csv", 0666)) < 0){
+	if((fd = creat("score.csv", 0666)) < 0){ //채점 결과 파일 생성 
 		fprintf(stderr, "creat error for score.csv");
 		return;
 	}
-	write_first_row(fd);
+	write_first_row(fd); //채점 결과 테이블의 첫 행 채우기 
 
 	for(num = 0; num < size; num++)
 	{
-		if(!strcmp(id_table[num], ""))
+		if(!strcmp(id_table[num], "")) //학생 입력 끝
 			break;
 
-		sprintf(tmp, "%s,", id_table[num]);
-		write(fd, tmp, strlen(tmp)); 
+		sprintf(tmp, "%s,", id_table[num]); //해당 학생의 학번
+		write(fd, tmp, strlen(tmp)); //테이블의 첫 열에 입력
 
-		score += score_student(fd, id_table[num]);
+		score += score_student(fd, id_table[num]); //학생별 점수 계산 
 	}
 
-	if(pOption)
-		printf("Total average : %.2f\n", score / num);
+	printf("Total average : %.2f\n", score / num); //마지막에 학생들의 점수 평균 출력
 
 	close(fd);
 }
 
-double score_student(int fd, char *id)
+double score_student(int fd, char *id) //학생별 점수 계산, 해당 학생 총 점수 리턴
 {
 	int type;
 	double result;
 	double score = 0;
 	int i;
 	char tmp[BUFLEN];
-	int size = sizeof(score_table) / sizeof(score_table[0]);
+	int size = sizeof(score_table) / sizeof(score_table[0]); //QNUM==100
 
 	for(i = 0; i < size ; i++)
 	{
-		if(score_table[i].score == 0)
+		if(score_table[i].score == 0) //문제 끝
 			break;
 
-		sprintf(tmp, "%s/%s/%s", stuDir, id, score_table[i].qname);
+		sprintf(tmp, "%s/%s/%s", stuDir, id, score_table[i].qname); //문제별로 탐색하기 위한 경로지정
 
-		if(access(tmp, F_OK) < 0)
-			result = false;
+		if(access(tmp, F_OK) < 0) //해당 파일이 존재하는지 체크
+			result = false; //파일이 없으면 해당 문제를 제출하지 않은 것
 		else
 		{
-			if((type = get_file_type(score_table[i].qname)) < 0)
+			if((type = get_file_type(score_table[i].qname)) < 0) //txt인지 c인지 검사
 				continue;
 			
 			if(type == TEXTFILE)
-				result = score_blank(id, score_table[i].qname);
+				result = score_blank(id, score_table[i].qname); //txt파일이면 빈칸문제 채점
 			else if(type == CFILE)
-				result = score_program(id, score_table[i].qname);
+				result = score_program(id, score_table[i].qname); //c파일이면 프로그램문제 채점
 		}
 
-		if(result == false)
+		if(result == false) //제출하지 않은 파일은 0점
 			write(fd, "0,", 2);
 		else{
-			if(result == true){
-				score += score_table[i].score;
+			if(result == true){ //채점 점수 입력
+				score += score_table[i].score; 
 				sprintf(tmp, "%.2f,", score_table[i].score);
 			}
-			else if(result < 0){
+			else if(result < 0){ //감점 처리(warning시 -0.1)
 				score = score + score_table[i].score + result;
 				sprintf(tmp, "%.2f,", score_table[i].score + result);
 			}
@@ -498,33 +497,28 @@ double score_student(int fd, char *id)
 		}
 	}
 
-	if(pOption)
-		printf("%s is finished.. score : %.2f\n", id, score); 
-	else
-		printf("%s is finished..\n", id);
-
-	sprintf(tmp, "%.2f\n", score);
+	sprintf(tmp, "%.2f\n", score); //마지막에 총점 입력
 	write(fd, tmp, strlen(tmp));
 
 	return score;
 }
 
-void write_first_row(int fd)
+void write_first_row(int fd) //채점 결과 테이블의 첫 번째 행 채우기
 {
 	int i;
 	char tmp[BUFLEN];
-	int size = sizeof(score_table) / sizeof(score_table[0]);
+	int size = sizeof(score_table) / sizeof(score_table[0]); //QNUM==100 
 
-	write(fd, ",", 1);
+	write(fd, ",", 1); //첫 번째 열은 학번일 들어가고 두 번째열부터 문제와 점수가 기록된다.
 
 	for(i = 0; i < size; i++){
-		if(score_table[i].score == 0)
+		if(score_table[i].score == 0) //문제 입력 끝
 			break;
 		
 		sprintf(tmp, "%s,", score_table[i].qname);
-		write(fd, tmp, strlen(tmp));
+		write(fd, tmp, strlen(tmp)); //문제 이름 입력
 	}
-	write(fd, "sum\n", 4);
+	write(fd, "sum\n", 4); //마지막 열은 총점
 }
 
 char *get_answer(int fd, char *result)
@@ -653,28 +647,29 @@ int score_blank(char *id, char *filename)
 	return false;
 }
 
-double score_program(char *id, char *filename)
+double score_program(char *id, char *filename) //TODO
 {
+	//컴파일 시 warning은 -0.1점, 에러는 0점
 	double compile;
 	int result;
 
-	compile = compile_program(id, filename);
+	compile = compile_program(id, filename); //문제 컴파일하여 실행파일 생성
 
-	if(compile == ERROR || compile == false)
+	if(compile == ERROR || compile == false) //컴파일 안 되는거 예외처리
 		return false;
 	
-	result = execute_program(id, filename);
+	result = execute_program(id, filename); //파일 실행해서 결과 리턴
 
 	if(!result)
 		return false;
 
-	if(compile < 0)
+	if(compile < 0) //컴파일시 warning은 -0.1점
 		return compile;
 
 	return true;
 }
 
-int is_thread(char *qname)
+int is_thread(char *qname) //-t옵션으로 -lpthread 옵션을 추가할 문제인지 검사
 {
 	int i;
 	int size = sizeof(threadFiles) / sizeof(threadFiles[0]);
@@ -686,7 +681,7 @@ int is_thread(char *qname)
 	return false;
 }
 
-double compile_program(char *id, char *filename)
+double compile_program(char *id, char *filename) //프로그램 문제 컴파일
 {
 	int fd;
 	char tmp_f[BUFLEN], tmp_e[BUFLEN];
@@ -696,66 +691,65 @@ double compile_program(char *id, char *filename)
 	off_t size;
 	double result;
 
-	memset(qname, 0, sizeof(qname));
-	memcpy(qname, filename, strlen(filename) - strlen(strrchr(filename, '.')));
+	memset(qname, 0, sizeof(qname)); //qname초기화
+	memcpy(qname, filename, strlen(filename) - strlen(strrchr(filename, '.'))); //확장자를 제거한 문제번호 만큼만 qname에 저장
 	
-	isthread = is_thread(qname);
+	isthread = is_thread(qname); //t옵션 체크
 
-	sprintf(tmp_f, "%s/%s/%s", ansDir, qname, filename);
-	sprintf(tmp_e, "%s/%s/%s.exe", ansDir, qname, qname);
+	sprintf(tmp_f, "%s/%s", ansDir, filename); //정답폴더/문제번호.c
+	sprintf(tmp_e, "%s/%s.exe", ansDir, qname); //정답폴더/문제번호.exe
 
-	if(tOption && isthread)
+	if(tOption && isthread) //t옵션시 -lpthread옵션 추가하여 컴파일
 		sprintf(command, "gcc -o %s %s -lpthread", tmp_e, tmp_f);
 	else
-		sprintf(command, "gcc -o %s %s", tmp_e, tmp_f);
+		sprintf(command, "gcc -o %s %s", tmp_e, tmp_f); //컴파일해서 문제번호.exe파일 생성
 
 	sprintf(tmp_e, "%s/%s/%s_error.txt", ansDir, qname, qname);
 	fd = creat(tmp_e, 0666);
 
-	redirection(command, fd, STDERR);
+	redirection(command, fd, STDERR); //에러메시지 파일로 저장
 	size = lseek(fd, 0, SEEK_END);
 	close(fd);
-	unlink(tmp_e);
-
-	if(size > 0)
+	unlink(tmp_e); //정답파일은 에러가 없으므로 삭제
+	if(size > 0) //정답파일 에러시 파일이 잘못됨. 채점하지 않고 종료
 		return false;
 
-	sprintf(tmp_f, "%s/%s/%s", stuDir, id, filename);
-	sprintf(tmp_e, "%s/%s/%s.stdexe", stuDir, id, qname);
+	sprintf(tmp_f, "%s/%s/%s", stuDir, id, filename); //학생폴더/문제번호.c
+	sprintf(tmp_e, "%s/%s/%s.stdexe", stuDir, id, qname); //학생폴더/문제번호.stdexe
 
 	if(tOption && isthread)
 		sprintf(command, "gcc -o %s %s -lpthread", tmp_e, tmp_f);
 	else
-		sprintf(command, "gcc -o %s %s", tmp_e, tmp_f);
+		sprintf(command, "gcc -o %s %s", tmp_e, tmp_f); //학생이 푼 문제 컴파일
 
 	sprintf(tmp_f, "%s/%s/%s_error.txt", stuDir, id, qname);
 	fd = creat(tmp_f, 0666);
 
-	redirection(command, fd, STDERR);
+	redirection(command, fd, STDERR); //에러메시지 파일로 저장
 	size = lseek(fd, 0, SEEK_END);
 	close(fd);
 
-	if(size > 0){
+	if(size > 0){ //에러메시지가 있을 경우
 		if(eOption)
 		{
-			sprintf(tmp_e, "%s/%s", errorDir, id);
+			sprintf(tmp_e, "%s/%s", errorDir, id); //에러메시지를 저장할 에러폴더가 접근 가능하면
 			if(access(tmp_e, F_OK) < 0)
 				mkdir(tmp_e, 0755);
 
 			sprintf(tmp_e, "%s/%s/%s_error.txt", errorDir, id, qname);
-			rename(tmp_f, tmp_e);
+			rename(tmp_f, tmp_e); //임시로 만든 에러폴더를 그대로 가져옴 
 
-			result = check_error_warning(tmp_e);
+			result = check_error_warning(tmp_e); //error인지 warning인지 확인
 		}
 		else{ 
-			result = check_error_warning(tmp_f);
+			result = check_error_warning(tmp_f); //error인지 warning인지 확인 
 			unlink(tmp_f);
 		}
 
-		return result;
+		return result; //error 또는 warning결과 리턴
 	}
 
-	unlink(tmp_f);
+	unlink(tmp_f); //e옵션 없을 경우 에러메시지 파일 삭제
 	return true;
 }
 
@@ -894,7 +888,7 @@ int compare_resultfile(char *file1, char *file2)
 	return true;
 }
 
-void redirection(char *command, int new, int old)
+void redirection(char *command, int new, int old)//stdout, stderr를 화면에 출력하지 않기 위해 사용 
 {
 	int saved;
 
