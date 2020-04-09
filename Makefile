@@ -13,4 +13,7 @@ blank.o : blank.c blank.h
 clean :
 	rm *.o
 	rm ssu_score
-
+	rm *.txt
+	find . -name '*.stdout' -exec rm {} \;
+	find . -name '*.stdexe' -exec rm {} \;
+	find . -name '*.exe' -exec rm {} \;

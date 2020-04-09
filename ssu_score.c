@@ -15,19 +15,19 @@
 extern struct ssu_scoreTable score_table[QNUM];
 extern char id_table[SNUM][10];
 
-struct ssu_scoreTable score_table[QNUM];
-char id_table[SNUM][10];
+struct ssu_scoreTable score_table[QNUM]; //문제 번호와 배정된 점수
+char id_table[SNUM][10]; //학생들 학번이 들어감
 
 char stuDir[BUFLEN]; //학생폴더
 char ansDir[BUFLEN]; //정답폴더
-char errorDir[BUFLEN];
-char threadFiles[ARGNUM][FILELEN];
-char cIDs[ARGNUM][FILELEN];
+char errorDir[BUFLEN]; //에러 폴더
+char threadFiles[ARGNUM][FILELEN]; //-t옵션 인자
+char iIDs[ARGNUM][FILELEN]; //-i옵션 인자
 
 int eOption = false;
 int tOption = false;
-int pOption = false;
-int cOption = false;
+int mOption = false;
+int iOption = false;
 
 void ssu_score(int argc, char *argv[]) //사실상 메인함수
 {
@@ -42,20 +42,12 @@ void ssu_score(int argc, char *argv[]) //사실상 메인함수
 	}
 
 	memset(saved_path, 0, BUFLEN);	//initialize local parameter
-//	if(argc >= 3 && strcmp(argv[1], "-c") != 0){	//c옵션 아니고 인자 3개이상
-	/******TODO EXCEPTION*******/
 	strcpy(stuDir, argv[1]);
 	strcpy(ansDir, argv[2]);
-//	}
 
-//	if(!check_option(argc, argv))	//if it is out of form, throw exception.
-//		exit(1);
-/*
-	if(!eOption && !tOption && !pOption && cOption){
-		do_cOption(cIDs);
-		return;
-	}
-*/
+	if(!check_option(argc, argv))	//if it is out of form, throw exception.
+		exit(1);
+
 	/*******Initialize parameter : stuDir, ansDir, saved_path**********/
 	getcwd(saved_path, BUFLEN);	//get current working space
 	if(chdir(stuDir) < 0){	//change directory
@@ -81,65 +73,65 @@ void ssu_score(int argc, char *argv[]) //사실상 메인함수
 	score_students();	//calculate score
 
 	/*
-	if(cOption)
+	if(cOption) //i옵션 들어갈 듯
 		do_cOption(cIDs);
 */
 	return;
 }
 
-int check_option(int argc, char *argv[])
+int check_option(int argc, char *argv[]) //옵션을 체크하고 인자를 처리한다.
 {
 	int i, j;
 	int c;
 
-	while((c = getopt(argc, argv, "e:thpc")) != -1)
+	while((c = getopt(argc, argv, "e:thmi")) != -1) //e옵션은 뒤에 인자 있다고 명시함. t,h,m,i옵션도 사용
 	{
 		switch(c){
-			case 'e':
+			case 'e': //error폴더 만드는 옵션 -e [DIRNAME]
 				eOption = true;
-				strcpy(errorDir, optarg);
+				strcpy(errorDir, optarg); //optarg에 인자 값
 
-				if(access(errorDir, F_OK) < 0)
-					mkdir(errorDir, 0755);
+				if(access(errorDir, F_OK) < 0) //에러 폴더가 존재하지 않으면 생성
+					mkdir(errorDir, 0755); 
 				else{
-					rmdirs(errorDir);
+					rmdirs(errorDir);  //존재하면 삭제 후 생성
 					mkdir(errorDir, 0755);
 				}
 				break;
-			case 't':
+			case 't': //해당 파일은 컴파일시 쓰레드 옵션 추가. -t [QNAMES]
 				tOption = true;
 				i = optind;
 				j = 0;
 
-				while(i < argc && argv[i][0] != '-'){
+				while(i < argc && argv[i][0] != '-'){ //-가 없는 인자만 가져옴.
 
-					if(j >= ARGNUM)
+					if(j >= ARGNUM) //ARGNUM == 5. 6개 부턴 입력받지 않음
 						printf("Maximum Number of Argument Exceeded.  :: %s\n", argv[i]);
 					else
-						strcpy(threadFiles[j], argv[i]);
+						strcpy(threadFiles[j], argv[i]); //thread변수에 저장하여 컴파일 함수에서 처리함
 					i++; 
 					j++;
 				}
 				break;
-			case 'p':
-				pOption = true;
+			case 'm': //원하는 문제 점수 수정을 위한 옵션, 프로그램 실행 후 문제 번호를 입력받는다.
+				mOption = true;
 				break;
-			case 'c':
-				cOption = true;
+			case 'i': //해당 학생의 틀린 문제 파일 출력. -i [STUDENTIDS]
+				iOption = true;
 				i = optind;
 				j = 0;
 
-				while(i < argc && argv[i][0] != '-'){
+				while(i < argc && argv[i][0] != '-'){ //이하 t옵션과 동일
 
 					if(j >= ARGNUM)
 						printf("Maximum Number of Argument Exceeded.  :: %s\n", argv[i]);
 					else
-						strcpy(cIDs[j], argv[i]);
+						strcpy(iIDs[j], argv[i]); //iIDs에 학번 저장
 					i++; 
 					j++;
 				}
 				break;
-			case '?':
+			case '?': //잘못 된 인자 에러처리
 				printf("Unkown option %c\n", optopt);
 				return false;
 		}
@@ -149,7 +141,7 @@ int check_option(int argc, char *argv[])
 }
 
 
-void do_cOption(char (*ids)[FILELEN])
+void do_cOption(char (*ids)[FILELEN]) //TODO:i옵션 구현시 사용
 {
 	FILE *fp;
 	char tmp[BUFLEN];
@@ -541,7 +533,7 @@ char *get_answer(int fd, char *result)
 	return result;
 }
 
-int score_blank(char *id, char *filename)
+int score_blank(char *id, char *filename) //해당 빈칸문제 채점 시작
 {
 	char tokens[TOKEN_CNT][MINLEN];
 	node *std_root = NULL, *ans_root = NULL;
@@ -914,30 +906,30 @@ int get_file_type(char *filename)	//get file type : c or txt
 		return -1;
 }
 
-void rmdirs(const char *path)
-{
+void rmdirs(const char *path) //디렉토리 삭제 함수
+{ //rmdir은 빈 디렉토리를 삭제. 이 함수는 비어있지 않은 디렉토리도 삭제한다.
 	struct dirent *dirp;
 	struct stat statbuf;
 	DIR *dp;
 	char tmp[50];
 	
-	if((dp = opendir(path)) == NULL)
+	if((dp = opendir(path)) == NULL) //디렉토리 오픈
 		return;
 
-	while((dirp = readdir(dp)) != NULL)
+	while((dirp = readdir(dp)) != NULL) //해당 디렉토리 내부 파일들을 가져온다.
 	{
-		if(!strcmp(dirp->d_name, ".") || !strcmp(dirp->d_name, ".."))
+		if(!strcmp(dirp->d_name, ".") || !strcmp(dirp->d_name, "..")) //.과 ..은 제외
 			continue;
 
 		sprintf(tmp, "%s/%s", path, dirp->d_name);
 
-		if(lstat(tmp, &statbuf) == -1)
+		if(lstat(tmp, &statbuf) == -1) //해당 파일 자체를 삭제하기 위해 lstat사용
 			continue;
 
-		if(S_ISDIR(statbuf.st_mode))
+		if(S_ISDIR(statbuf.st_mode)) //디렉토리면 재귀호출로 처리
 			rmdirs(tmp);
 		else
-			unlink(tmp);	
+			unlink(tmp); //일반 파일이면 바로 삭제
 	}
 
 	closedir(dp);

@@ -41,7 +41,7 @@ struct ssu_scoreTable{
 };
 
 void ssu_score(int argc, char *argv[]); //사실상 메인함수
-int check_option(int argc, char *argv[]); //if it is out of form, throw exception.
+int check_option(int argc, char *argv[]); //옵션과 인자를 처리함.
 void print_usage();	//print program manual option '-h'
 
 void score_students(); //학생 점수 채점(채점 결과 테이블 작성)
@@ -63,7 +63,7 @@ int is_exist(char (*src)[FILELEN], char *target);
 int is_thread(char *qname);
 void redirection(char *command, int newfd, int oldfd); //command실행시 stdout, stderr를 화면에 출력하지 않기 위해 사용
 int get_file_type(char *filename); //get file type : .c or .txt
-void rmdirs(const char *path);
+void rmdirs(const char *path); //디렉토리 삭제. 내부 파일도 삭제함
 void to_lower_case(char *c); //대문자를 소문자로 변경
 
 void set_scoreTable(char *curDir); //set scoreTable.
