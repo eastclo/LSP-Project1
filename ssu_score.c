@@ -514,20 +514,20 @@ void write_first_row(int fd) //채점 결과 테이블의 첫 번째 행 채우�
 	write(fd, "sum\n", 4); //마지막 열은 총점
 }
 
-char *get_answer(int fd, char *result)
+char *get_answer(int fd, char *result) //해당파일에 적힌 정답 내용을 가져온다.
 {
 	char c;
 	int idx = 0;
 
 	memset(result, 0, BUFLEN);
-	while(read(fd, &c, 1) > 0)
+	while(read(fd, &c, 1) > 0) //문자 하나씩 읽어 result에 저장
 	{
-		if(c == ':')
+		if(c == ':') //답안 하나만 가져온다
 			break;
 		
 		result[idx++] = c;
 	}
-	if(result[strlen(result) - 1] == '\n')
+	if(result[strlen(result) - 1] == '\n') //마지막에 개행이 있을 경우 제거
 		result[strlen(result) - 1] = '\0';
 
 	return result;
@@ -541,35 +541,35 @@ int score_blank(char *id, char *filename) //해당 빈칸문제 채점 시작
 	char tmp[BUFLEN];
 	char s_answer[BUFLEN], a_answer[BUFLEN];
 	char qname[FILELEN];
-	int fd_std, fd_ans;
+	int fd_std, fd_ans; //학생 정답과 답지의 fd
 	int result = true;
 	int has_semicolon = false;
 
-	memset(qname, 0, sizeof(qname));
-	memcpy(qname, filename, strlen(filename) - strlen(strrchr(filename, '.')));
+	memset(qname, 0, sizeof(qname)); //qname에 filename(문제 번호)의 확장자를 제거하여
+	memcpy(qname, filename, strlen(filename) - strlen(strrchr(filename, '.'))); //저장
 
-	sprintf(tmp, "%s/%s/%s", stuDir, id, filename);
+	sprintf(tmp, "%s/%s/%s", stuDir, id, filename); //학생 정답파일을 가져온다.
 	fd_std = open(tmp, O_RDONLY);
-	strcpy(s_answer, get_answer(fd_std, s_answer));
+	strcpy(s_answer, get_answer(fd_std, s_answer)); //학생 정답 내용을 가져온다.
 
-	if(!strcmp(s_answer, "")){
+	if(!strcmp(s_answer, "")){ //정답을 적지 않았을 경우 0점
 		close(fd_std);
 		return false;
 	}
 
-	if(!check_brackets(s_answer)){
+	if(!check_brackets(s_answer)){ //학생 정답의 괄호가 맞지 않으면 무조건 에러. 0점
 		close(fd_std);
 		return false;
 	}
 
-	strcpy(s_answer, ltrim(rtrim(s_answer)));
+	strcpy(s_answer, ltrim(rtrim(s_answer))); //학생 정답의 왼쪽, 오른쪽 공백 제거
 
-	if(s_answer[strlen(s_answer) - 1] == ';'){
-		has_semicolon = true;
-		s_answer[strlen(s_answer) - 1] = '\0';
+	if(s_answer[strlen(s_answer) - 1] == ';'){ //마지막에 세미콜론이 있으면
+		has_semicolon = true; //세미콜론 체크 후
+		s_answer[strlen(s_answer) - 1] = '\0'; //제거
 	}
 
-	if(!make_tokens(s_answer, tokens)){
+	if(!make_tokens(s_answer, tokens)){ 
 		close(fd_std);
 		return false;
 	}
@@ -577,7 +577,7 @@ int score_blank(char *id, char *filename) //해당 빈칸문제 채점 시작
 	idx = 0;
 	std_root = make_tree(std_root, tokens, &idx, 0);
 
-	sprintf(tmp, "%s/%s/%s", ansDir, qname, filename);
+	sprintf(tmp, "%s/%s", ansDir, filename);
 	fd_ans = open(tmp, O_RDONLY);
 
 	while(1)

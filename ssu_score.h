@@ -48,7 +48,7 @@ void score_students(); //학생 점수 채점(채점 결과 테이블 작성)
 double score_student(int fd, char *id); //학생별 점수 계산, 해당 학생 총 점수 리턴
 void write_first_row(int fd); //채점 결과 테이블의 첫 행 채우기
 
-char *get_answer(int fd, char *result);
+char *get_answer(int fd, char *result); //해당 파일에 적힌 정답 내용을 가져온다.
 int score_blank(char *id, char *filename); //빈칸문제 채점 시작
 double score_program(char *id, char *filename); //프로그램 문제 채점 시작
 double compile_program(char *id, char *filename); //프로그램 문제 학생 답안과 정답을 컴파일

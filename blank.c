@@ -14,7 +14,7 @@ char datatype[DATATYPE_SIZE][MINLEN] = {"int", "char", "double", "float", "long"
 			, "rlim_t", "jmp_buf", "sig_atomic_t", "clock_t", "struct"};
 
 
-operator_precedence operators[OPERATOR_CNT] = {
+operator_precedence operators[OPERATOR_CNT] = { //연산자별 우선순위
 	{"(", 0}, {")", 0}
 	,{"->", 1}	
 	,{"*", 4}	,{"/", 3}	,{"%", 2}	
@@ -159,34 +159,34 @@ void compare_tree(node *root1,  node *root2, int *result)
 	}
 }
 
-int make_tokens(char *str, char tokens[TOKEN_CNT][MINLEN])
+int make_tokens(char *str, char tokens[TOKEN_CNT][MINLEN])  //토큰 생성
 {
 	char *start, *end;
 	char tmp[BUFLEN];
 	char str2[BUFLEN];
-	char *op = "(),;><=!|&^/+-*\""; 
+	char *op = "(),;><=!|&^/+-*\"";  //chat : % 어디갔누
 	int row = 0;
 	int i;
  	int isPointer;
 	int lcount, rcount;
 	int p_str;
 	
-	clear_tokens(tokens);
+	clear_tokens(tokens); //토큰 변수 초기화
 
-	start = str;
+	start = str; //정답의 시작 위치 포인터
 	
-	if(is_typeStatement(str) == 0) 
+	if(is_typeStatement(str) == 0)  //타입이 잘못 써져있으므로 에러
 		return false;	
 	
-	while(1)
+	while(1) //토큰을 하나씩 처리해서 tokens 변수에 넣기
 	{
-		if((end = strpbrk(start, op)) == NULL)
+		if((end = strpbrk(start, op)) == NULL) //op에서 가장 첫 번째로 일치되는 문자
 			break;
 
-		if(start == end){
+		if(start == end){ //찾은 문자가 남은 문자열의 가장 첫 번째라면 
 
-			if(!strncmp(start, "--", 2) || !strncmp(start, "++", 2)){
-				if(!strncmp(start, "++++", 4)||!strncmp(start,"----",4))
+			if(!strncmp(start, "--", 2) || !strncmp(start, "++", 2)){ //현재 문자열의 첫 번째가 ++, --의 증감연산자인 경우
+				if(!strncmp(start, "++++", 4)||!strncmp(start,"----",4)) 
 					return false;
 
 				if(is_character(*ltrim(start + 2))){
@@ -227,12 +227,12 @@ int make_tokens(char *str, char tokens[TOKEN_CNT][MINLEN])
 				|| !strncmp(start, ">=", 2) || !strncmp(start, "||", 2) || !strncmp(start, "&&", 2) 
 				|| !strncmp(start, "&=", 2) || !strncmp(start, "^=", 2) || !strncmp(start, "!=", 2) 
 				|| !strncmp(start, "|=", 2) || !strncmp(start, "+=", 2)	|| !strncmp(start, "-=", 2) 
-				|| !strncmp(start, "*=", 2) || !strncmp(start, "/=", 2)){
+				|| !strncmp(start, "*=", 2) || !strncmp(start, "/=", 2)){ //현재 문자열의 첫 번째가 비교, 논리, 비트, 대입 연산자일 경우
 
 				strncpy(tokens[row], start, 2);
 				start += 2;
 			}
-			else if(!strncmp(start, "->", 2))
+			else if(!strncmp(start, "->", 2)) //현재 문자열의 첫 번째가 멤버 포인터 연산자일 경우
 			{
 				end = strpbrk(start + 2, op);
 
@@ -246,7 +246,7 @@ int make_tokens(char *str, char tokens[TOKEN_CNT][MINLEN])
 				}
 				row--;
 			}
-			else if(*end == '&')
+			else if(*end == '&') //현재 문자열의 첫 번째가 &일 경우
 			{
 				
 				if(row == 0 || (strpbrk(tokens[row - 1], op) != NULL)){
@@ -272,7 +272,7 @@ int make_tokens(char *str, char tokens[TOKEN_CNT][MINLEN])
 				}
 				
 			}
-		  	else if(*end == '*')
+		  	else if(*end == '*') //현재 문자열의 첫 번째가 * 문자일 경우
 			{
 				isPointer=0;
 
@@ -334,7 +334,7 @@ int make_tokens(char *str, char tokens[TOKEN_CNT][MINLEN])
 					}
 				}
 			}
-			else if(*end == '(') 
+			else if(*end == '(')  //현재 문자열의 첫 번째가 ( 일 경우
 			{
 				lcount = 0;
 				rcount = 0;
@@ -373,7 +373,7 @@ int make_tokens(char *str, char tokens[TOKEN_CNT][MINLEN])
 				}
 
 			}
-			else if(*end == '\"') 
+			else if(*end == '\"')  //현재 문자열의 첫 번재 문자가 " 문자인 경우
 			{
 				end = strpbrk(start + 1, "\"");
 				
@@ -387,7 +387,7 @@ int make_tokens(char *str, char tokens[TOKEN_CNT][MINLEN])
 
 			}
 
-			else{
+			else{ //현재 문자열의 첫 번째가 그 외 다른 문자인 경우
 				
 				if(row > 0 && !strcmp(tokens[row - 1], "++"))
 					return false;
@@ -415,8 +415,8 @@ int make_tokens(char *str, char tokens[TOKEN_CNT][MINLEN])
 					}
 				}
 			}
-		}
-		else{ 
+		} 
+		else{ //start != end (start에 op 이외의 문자가 있다)
 			if(all_star(tokens[row - 1]) && row > 1 && !is_character(tokens[row - 2][strlen(tokens[row - 2]) - 1]))   
 				row--;				
 
@@ -1030,47 +1030,47 @@ void free_node(node *cur)
 }
 
 
-int is_character(char c)
+int is_character(char c) //숫자, 알파벳일 경우 1 리턴
 {
 	return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
 }
 
-int is_typeStatement(char *str)
-{ 
+int is_typeStatement(char *str) //데이터 타입과 관련된 문자가 있는지 확인
+{ //0: 타입이 잘못 써져있음. 1: 타입이 안 써져있음. 2: 타입이 제대로 써져있음
 	char *start;
 	char str2[BUFLEN] = {0}; 
 	char tmp[BUFLEN] = {0}; 
 	char tmp2[BUFLEN] = {0}; 
 	int i;	 
 	
-	start = str;
+	start = str; //str원본을 가리키는 start
 	strncpy(str2,str,strlen(str));
-	remove_space(str2);
+	remove_space(str2); //str에서 공백이 제거된 str2
 
-	while(start[0] == ' ')
-		start += 1;
+	while(start[0] == ' ') //chat:제일 앞부분으 공백이면 오른쪽으로 이동시키는건데 
+		start += 1; //이거 make_tokens하기 전에 ltrim, rtrim다 했는데 왜 또 하지;;
 
-	if(strstr(str2, "gcc") != NULL)
+	if(strstr(str2, "gcc") != NULL) //만약 gcc 문장이라면
 	{
-		strncpy(tmp2, start, strlen("gcc"));
-		if(strcmp(tmp2,"gcc") != 0)
-			return 0;
+		strncpy(tmp2, start, strlen("gcc")); //start의 가장 첫 부분은 gcc여야한다. 
+		if(strcmp(tmp2,"gcc") != 0) //복사후 비교했는데 gcc가 아니면
+			return 0; //0리턴
 		else
-			return 2;
+			return 2; //맞으면 2
 	}
 	
 	for(i = 0; i < DATATYPE_SIZE; i++)
 	{
-		if(strstr(str2,datatype[i]) != NULL)
+		if(strstr(str2,datatype[i]) != NULL) //특정 데이터 타입인지 검사
 		{	
-			strncpy(tmp, str2, strlen(datatype[i]));
-			strncpy(tmp2, start, strlen(datatype[i]));
-			
-			if(strcmp(tmp, datatype[i]) == 0)
-				if(strcmp(tmp, tmp2) != 0)
-					return 0;  
+			strncpy(tmp, str2, strlen(datatype[i])); //공백을 지웠으니까 strstr로 검색한 데이터 타입은
+			strncpy(tmp2, start, strlen(datatype[i])); //st2 나 start나 같은 위치에 있어야함
+
+			if(strcmp(tmp, datatype[i]) == 0) 
+				if(strcmp(tmp, tmp2) != 0) //따라서 비교했는데 같지 않으면
+					return 0;  //0
 				else
-					return 2;
+					return 2; //맞으면 2
 		}
 
 	}
@@ -1116,12 +1116,12 @@ int find_typeSpecifier2(char tokens[TOKEN_CNT][MINLEN])
     return -1;
 }
 
-int all_star(char *str)
+int all_star(char *str) //전부 *이면 1, 하나라도 아니면 0을 리턴
 {
 	int i;
 	int length= strlen(str);
 	
- 	if(length == 0)	
+ 	if(length == 0)	//길이가 0일 때도 0 리턴
 		return 0;
 	
 	for(i = 0; i < length; i++)
@@ -1131,14 +1131,14 @@ int all_star(char *str)
 
 }
 
-int all_character(char *str)
+int all_character(char *str) //숫자 , 알파벳이 하나라도 있으면 1 리턴
 {
 	int i;
 
 	for(i = 0; i < strlen(str); i++)
 		if(is_character(str[i]))
 			return 1;
-	return 0;
+	return 0; //하나도 없으면 0
 	
 }
 
@@ -1247,7 +1247,7 @@ int reset_tokens(int start, char tokens[TOKEN_CNT][MINLEN])
 	return true;
 }
 
-void clear_tokens(char tokens[TOKEN_CNT][MINLEN])
+void clear_tokens(char tokens[TOKEN_CNT][MINLEN]) //토큰변수 0으로 초기화
 {
 	int i;
 
@@ -1255,26 +1255,26 @@ void clear_tokens(char tokens[TOKEN_CNT][MINLEN])
 		memset(tokens[i], 0, sizeof(tokens[i]));
 }
 
-char *rtrim(char *_str)
+char *rtrim(char *_str) //문자열의 오른쪽에 공백 제거
 {
 	char tmp[BUFLEN];
 	char *end;
 
 	strcpy(tmp, _str);
-	end = tmp + strlen(tmp) - 1;
-	while(end != _str && isspace(*end))
+	end = tmp + strlen(tmp) - 1; //tmp의 마지막 인덱스
+	while(end != _str && isspace(*end)) //공백이 아닐 때까지 오른쪽으로 포인터 이동
 		--end;
 
-	*(end + 1) = '\0';
+	*(end + 1) = '\0'; //문자열 자름
 	_str = tmp;
 	return _str;
 }
 
-char *ltrim(char *_str)
+char *ltrim(char *_str) //문자열의 왼쪽 공백 제거
 {
 	char *start = _str;
 
-	while(*start != '\0' && isspace(*start))
+	while(*start != '\0' && isspace(*start)) //공백이 아닐 때까지 왼쪽으로 포인터 이동
 		++start;
 	_str = start;
 	return _str;
@@ -1323,39 +1323,39 @@ char* remove_extraspace(char *str)
 
 
 
-void remove_space(char *str)
+void remove_space(char *str) //모든 공백 제거
 {
 	char* i = str;
 	char* j = str;
 	
-	while(*j != 0)
+	while(*j != 0) //널문자가 아닐 때 까지
 	{
-		*i = *j++;
-		if(*i != ' ')
-			i++;
+		*i = *j++; //i는 공백이 아닐 때만 옆으로 한 칸씩 이동하여
+		if(*i != ' ') //공백일 경우 자동으로 덮어쓰기가 되면서
+			i++; //공백이 지워진다.
 	}
-	*i = 0;
+	*i = 0; //마지막에 널문자로 마무리
 }
 
-int check_brackets(char *str)
+int check_brackets(char *str) //괄호가 정상인지 체크
 {
 	char *start = str;
 	int lcount = 0, rcount = 0;
 	
-	while(1){
-		if((start = strpbrk(start, "()")) != NULL){
+	while(1){ //근데 이거 잘못 만든거 아닌가? 횟수 체크해서 홀수, 짝수 cnt일 때 ( ) 탐색되야 할텐데 흠....
+		if((start = strpbrk(start, "()")) != NULL){ //두 번째 인수에 적힌 문자가 포함된 위치 포인터 반환
 			if(*(start) == '(')
 				lcount++;
 			else
 				rcount++;
 
-			start += 1; 		
+			start += 1; //찾은 문자 다음 부터 검색하기 위해 		
 		}
 		else
 			break;
 	}
 
-	if(lcount != rcount)
+	if(lcount != rcount) //괄호가 맞지 않으면 에러
 		return 0;
 	else 
 		return 1;
