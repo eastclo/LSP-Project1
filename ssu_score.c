@@ -69,13 +69,21 @@ void ssu_score(int argc, char *argv[]) //사실상 메인함수
 	set_scoreTable(saved_path);	//set score table
 	set_idTable();	//set scoring result table
 
+//	if(mOption) //m옵션 실행
+//		do_mOption();
+
+	if(!eOption && !tOption && !mOption && iOption){ //i옵션만 있을 경우 학생 오답만 출력 후 종료
+		do_iOption(iIDs);
+		return;
+	}
+
 	printf("grading student's test papers..\n");
 	score_students();	//calculate score
 
-	/*
-	if(cOption) //i옵션 들어갈 듯
-		do_cOption(cIDs);
-*/
+
+	if(iOption) //i옵션 실행
+		do_iOption(iIDs);
+
 	return;
 }
 
@@ -120,7 +128,7 @@ int check_option(int argc, char *argv[]) //옵션을 체크하고 인자를 처�
 				iOption = true;
 				i = optind;
 				j = 0;
-
+aaqqqqqqqa
 				while(i < argc && argv[i][0] != '-'){ //이하 t옵션과 동일
 
 					if(j >= ARGNUM)
@@ -141,51 +149,59 @@ int check_option(int argc, char *argv[]) //옵션을 체크하고 인자를 처�
 }
 
 
-void do_cOption(char (*ids)[FILELEN]) //TODO:i옵션 구현시 사용
+void do_iOption(char (*ids)[FILELEN]) //i옵션 실행
 {
 	FILE *fp;
 	char tmp[BUFLEN];
 	int i = 0;
 	char *p, *saved;
 
-	if((fp = fopen("score.csv", "r")) == NULL){
+	if((fp = fopen("score.csv", "r")) == NULL){ //채점 결과 테이블 열기
 		fprintf(stderr, "file open error for score.csv\n");
 		return;
 	}
 
-	fscanf(fp, "%s\n", tmp);
+	fscanf(fp, "%s\n", tmp);  //문제가 적혀있는 첫 행 제외
 
-	while(fscanf(fp, "%s\n", tmp) != EOF)
+	while(fscanf(fp, "%s\n", tmp) != EOF) //학생 한 명의 점수 가져오기
 	{
-		p = strtok(tmp, ",");
+		p = strtok(tmp, ","); //문제 하나하나의 점수 가져오기
 
-		if(!is_exist(ids, tmp))
+		if(!is_exist(ids, p)) //i옵션으로 보고자하는 학생인지
 			continue;
 
-		printf("%s's score : ", tmp);
+		printf("%s's wrong answer : \n", tmp);
 
-		while((p = strtok(NULL, ",")) != NULL)
-			saved = p;
-
-		printf("%s\n", saved);
+		bool first = false;
+		while((p = strtok(NULL, ",")) != NULL) { //문제별 점수를 하나씩 가져온다.
+			if(!strcmp(p, "0")) { //0점일 경우 해당 문제 출력
+				if(!first) 
+					printf("%s", score_table[i].qname);
+				else
+					printf(", %s", score_table[i].qname);
+				first = true; //첫 번째 오답 문제 출력에 ,를 제외하기 위함
+			}
+			i++;
+		}			
+		printf("\n");
+		i = 0;
 	}
 	fclose(fp);
 }
 
-int is_exist(char (*src)[FILELEN], char *target)
+int is_exist(char (*src)[FILELEN], char *target) //i옵션을 적용하는 학번인지 검사하여 맞으면 true
 {
 	int i = 0;
 
 	while(1)
 	{
-		if(i >= ARGNUM)
+		if(i >= ARGNUM) //i가 5이상이 되면 종료
 			return false;
-		else if(!strcmp(src[i], ""))
+		else if(!strcmp(src[i], "")) //i옵션으로 더이상 넣은게 없으면 종료
 			return false;
-		else if(!strcmp(src[i++], target))
+		else if(!strcmp(src[i++], target)) //찾을 때까지 iIDs 순회
 			return true;
 	}
-	return false;
 }
 
 void set_scoreTable(char *curDir) //set score table
@@ -227,12 +243,12 @@ void make_scoreTable(char *curDir) //score_table 배열에 문제별 점수를 �
 	int type, num;
 	double score, bscore, pscore;
 	struct dirent *dirp, *c_dirpl;
-/*	{
+	/*	{
 		long d_ino	//i-node number
 		off_t d_off //offset
 		unsigned short d_reclen //length of file name
 		char d_name[NAME_MAX+1] //file name
-	 }  */
+		}  */
 	DIR *dp, *c_dp;	//directory stream pointer
 	char tmp[BUFLEN];
 	int idx = 0;
@@ -257,6 +273,11 @@ void make_scoreTable(char *curDir) //score_table 배열에 문제별 점수를 �
 	while((dirp = readdir(dp)) != NULL) //디렉토리 내 파일 목록을 순회함.
 	{
 		if(!strcmp(dirp->d_name, ".") || !strcmp(dirp->d_name, ".."))
+			continue;
+
+		type = get_file_type(dirp->d_name); //읽은 파일의 타입을 알아냄
+
+		if(type != TEXTFILE && type != CFILE) //c파일, txt파일 아니면 패스
 			continue;
 
 		strcpy(score_table[idx++].qname, dirp->d_name);
@@ -300,6 +321,8 @@ void write_scoreTable(char *filename) //score_table.csv 생성
 
 	for(i = 0; i < num; i++)
 	{
+		if(score_table[i].score == 0) //문제 수 만큼 작성하기 위해 추가한 구문
+			break;
 		sprintf(tmp, "%s,%.2f\n", score_table[i].qname, score_table[i].score); //문제, 점수 작성
 		write(fd, tmp, strlen(tmp));
 	}
@@ -386,7 +409,7 @@ void get_qname_number(char *qname, int *num1, int *num2) //문제 번호 리턴
 
 	strncpy(dup, qname, strlen(qname)); //문자열 길이만큼만 복사(strcpy를 쓰면 FILELEN만큼 복사하여 효율x)
 	*num1 = atoi(strtok(dup, "-.")); //"-."기준으로 문자열 dup 분리.
-	
+
 	p = strtok(NULL, "-."); //NULL이 들어오면 이전에 분리된 부분 부터 문자열 분리.
 	if(p == NULL)
 		*num2 = 0;
@@ -467,7 +490,7 @@ double score_student(int fd, char *id) //학생별 점수 계산, 해당 학생 
 		{
 			if((type = get_file_type(score_table[i].qname)) < 0) //txt인지 c인지 검사
 				continue;
-			
+
 			if(type == TEXTFILE)
 				result = score_blank(id, score_table[i].qname); //txt파일이면 빈칸문제 채점
 			else if(type == CFILE)
@@ -507,7 +530,7 @@ void write_first_row(int fd) //채점 결과 테이블의 첫 번째 행 채우�
 	for(i = 0; i < size; i++){
 		if(score_table[i].score == 0) //문제 입력 끝
 			break;
-		
+
 		sprintf(tmp, "%s,", score_table[i].qname);
 		write(fd, tmp, strlen(tmp)); //문제 이름 입력
 	}
@@ -524,7 +547,7 @@ char *get_answer(int fd, char *result) //해당파일에 적힌 정답 내용을
 	{
 		if(c == ':') //답안 하나만 가져온다
 			break;
-		
+
 		result[idx++] = c;
 	}
 	if(result[strlen(result) - 1] == '\n') //마지막에 개행이 있을 경우 제거
@@ -569,13 +592,13 @@ int score_blank(char *id, char *filename) //해당 빈칸문제 채점 시작
 		s_answer[strlen(s_answer) - 1] = '\0'; //제거
 	}
 
-	if(!make_tokens(s_answer, tokens)){ 
-		close(fd_std);
-		return false;
+	if(!make_tokens(s_answer, tokens)){ //학생 정답 토큰 생성 중 에러시
+		close(fd_std);					//정답이 잘못된 것이므로
+		return false;					//0점
 	}
 
 	idx = 0;
-	std_root = make_tree(std_root, tokens, &idx, 0);
+	std_root = make_tree(std_root, tokens, &idx, 0); //토큰 계산을 위해 트리생성
 
 	sprintf(tmp, "%s/%s", ansDir, filename);
 	fd_ans = open(tmp, O_RDONLY);
@@ -586,37 +609,37 @@ int score_blank(char *id, char *filename) //해당 빈칸문제 채점 시작
 		result = true;
 
 		for(idx = 0; idx < TOKEN_CNT; idx++)
-			memset(tokens[idx], 0, sizeof(tokens[idx]));
+			memset(tokens[idx], 0, sizeof(tokens[idx])); //토큰 초기화
 
-		strcpy(a_answer, get_answer(fd_ans, a_answer));
+		strcpy(a_answer, get_answer(fd_ans, a_answer)); //정답 중 하나를 가져옴
 
 		if(!strcmp(a_answer, ""))
 			break;
 
-		strcpy(a_answer, ltrim(rtrim(a_answer)));
+		strcpy(a_answer, ltrim(rtrim(a_answer))); //정답의 앞뒤 공백 제거
 
-		if(has_semicolon == false){
-			if(a_answer[strlen(a_answer) -1] == ';')
-				continue;
+		if(has_semicolon == false){ //학생 정답에 세미콜론이 없는데
+			if(a_answer[strlen(a_answer) -1] == ';') //답안에 있다면
+				continue; //다른 정답을 가져옴
 		}
 
-		else if(has_semicolon == true)
+		else if(has_semicolon == true) //학생 정답에 세미콜론이 있을 때
 		{
-			if(a_answer[strlen(a_answer) - 1] != ';')
-				continue;
+			if(a_answer[strlen(a_answer) - 1] != ';')  //답안엔 없다면 
+				continue;								//다른 답안을 가져오고
 			else
-				a_answer[strlen(a_answer) - 1] = '\0';
+				a_answer[strlen(a_answer) - 1] = '\0'; //답안에 있으면 세미콜론을 지워줌
 		}
 
-		if(!make_tokens(a_answer, tokens))
+		if(!make_tokens(a_answer, tokens)) //정답 토큰화
 			continue;
 
 		idx = 0;
-		ans_root = make_tree(ans_root, tokens, &idx, 0);
+		ans_root = make_tree(ans_root, tokens, &idx, 0); //토큰 계산을 위한 트리생성
 
-		compare_tree(std_root, ans_root, &result);
+		compare_tree(std_root, ans_root, &result); //학생정답과 답안의 결과 계산
 
-		if(result == true){
+		if(result == true){ //정답이 일치하면 1점
 			close(fd_std);
 			close(fd_ans);
 
@@ -628,7 +651,7 @@ int score_blank(char *id, char *filename) //해당 빈칸문제 채점 시작
 
 		}
 	}
-	
+	//일치하는 정답이 없으면 0점
 	close(fd_std);
 	close(fd_ans);
 
@@ -650,7 +673,7 @@ double score_program(char *id, char *filename) //TODO
 
 	if(compile == ERROR || compile == false) //컴파일 안 되는거 예외처리
 		return false;
-	
+
 	result = execute_program(id, filename); //파일 실행해서 결과 리턴
 
 	if(!result)
@@ -686,8 +709,8 @@ double compile_program(char *id, char *filename) //프로그램 문제 컴파일
 
 	memset(qname, 0, sizeof(qname)); //qname초기화
 	memcpy(qname, filename, strlen(filename) - strlen(strrchr(filename, '.'))); //확장자를 제거한 문제번호 만큼만 qname에 저장
-	
-	isthread = is_thread(qname); //t옵션 체크
+
+	isthread = is_thread(qname); //쓰레드 옵션 요청한 파일인지
 
 	sprintf(tmp_f, "%s/%s", ansDir, filename); //정답폴더/문제번호.c
 	sprintf(tmp_e, "%s/%s.exe", ansDir, qname); //정답폴더/문제번호.exe
@@ -697,7 +720,7 @@ double compile_program(char *id, char *filename) //프로그램 문제 컴파일
 	else
 		sprintf(command, "gcc -o %s %s", tmp_e, tmp_f); //컴파일해서 문제번호.exe파일 생성
 
-	sprintf(tmp_e, "%s/%s/%s_error.txt", ansDir, qname, qname);
+	sprintf(tmp_e, "%s/%s_error.txt", ansDir, qname);
 	fd = creat(tmp_e, 0666);
 
 	redirection(command, fd, STDERR); //에러메시지 파일로 저장
@@ -793,7 +816,7 @@ int execute_program(char *id, char *filename) //학생답안과 정답을 실행
 
 	start = time(NULL); //프로그램 실행 시작시간 기록 
 	redirection(tmp, fd, STDOUT); //실행하여 std_fname에 결과 저장
-	
+
 	sprintf(tmp, "%s.stdexe", qname); 
 	while((pid = inBackground(tmp)) > 0){ //프로세스가 계속 실행 중 인지 체크
 		end = time(NULL);
@@ -817,7 +840,7 @@ pid_t inBackground(char *name) //name실행파일이 백그라운드에서 아�
 	char tmp[64];
 	int fd;
 	off_t size;
-	
+
 	memset(tmp, 0, sizeof(tmp));
 	fd = open("background.txt", O_RDWR | O_CREAT | O_TRUNC, 0666); //ps | grep 명령어 결과 저장할 임시 파일
 
@@ -863,7 +886,7 @@ int compare_resultfile(char *file1, char *file2) //학생 답안과 정답 결�
 			else 
 				break;
 		}
-		
+
 		if(len1 == 0 && len2 == 0) //둘 다 더이상 읽을게 없으면 루프 종료 후 true리턴
 			break;
 
@@ -912,7 +935,7 @@ void rmdirs(const char *path) //디렉토리 삭제 함수
 	struct stat statbuf;
 	DIR *dp;
 	char tmp[50];
-	
+
 	if((dp = opendir(path)) == NULL) //디렉토리 오픈
 		return;
 
