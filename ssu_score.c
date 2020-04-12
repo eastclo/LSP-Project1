@@ -48,6 +48,11 @@ void ssu_score(int argc, char *argv[]) //사실상 메인함수
 	if(!check_option(argc, argv))	//if it is out of form, throw exception.
 		exit(1);
 
+	if(!eOption && !tOption && !mOption && iOption){ //i옵션만 있을 경우 학생 오답만 출력 후 종료
+		do_iOption(iIDs);
+		return;
+	}
+
 	/*******Initialize parameter : stuDir, ansDir, saved_path**********/
 	getcwd(saved_path, BUFLEN);	//get current working space
 	if(chdir(stuDir) < 0){	//change directory
@@ -69,13 +74,8 @@ void ssu_score(int argc, char *argv[]) //사실상 메인함수
 	set_scoreTable(saved_path);	//set score table
 	set_idTable();	//set scoring result table
 
-//	if(mOption) //m옵션 실행
-//		do_mOption();
-
-	if(!eOption && !tOption && !mOption && iOption){ //i옵션만 있을 경우 학생 오답만 출력 후 종료
-		do_iOption(iIDs);
-		return;
-	}
+	if(mOption) //m옵션 실행
+		do_mOption(saved_path);
 
 	printf("grading student's test papers..\n");
 	score_students();	//calculate score
@@ -128,7 +128,6 @@ int check_option(int argc, char *argv[]) //옵션을 체크하고 인자를 처�
 				iOption = true;
 				i = optind;
 				j = 0;
-aaqqqqqqqa
 				while(i < argc && argv[i][0] != '-'){ //이하 t옵션과 동일
 
 					if(j >= ARGNUM)
@@ -148,6 +147,10 @@ aaqqqqqqqa
 	return true;
 }
 
+void do_mOption(char *curDir) //m옵션 실행
+{
+	//write_scoreTable 호출
+}
 
 void do_iOption(char (*ids)[FILELEN]) //i옵션 실행
 {
@@ -172,7 +175,7 @@ void do_iOption(char (*ids)[FILELEN]) //i옵션 실행
 
 		printf("%s's wrong answer : \n", tmp);
 
-		bool first = false;
+		int first = false;
 		while((p = strtok(NULL, ",")) != NULL) { //문제별 점수를 하나씩 가져온다.
 			if(!strcmp(p, "0")) { //0점일 경우 해당 문제 출력
 				if(!first) 
@@ -806,8 +809,9 @@ int execute_program(char *id, char *filename) //학생답안과 정답을 실행
 	fd = creat(ans_fname, 0666);
 
 	sprintf(tmp, "%s/%s.exe", ansDir, qname); //정답 실행결과를 ans_fname에 저장
-	redirection(tmp, fd, STDOUT); //표준출력을  ans_fname에 출력하도록 변경
+	redirection(tmp, fd, STDOUT); //표준출력을 ans_fname에 출력하도록 변경
 	close(fd);
+
 
 	sprintf(std_fname, "%s/%s/%s.stdout", stuDir, id, qname); //학생 정답 실행 결과를 저장할 파일 생성
 	fd = creat(std_fname, 0666);
@@ -827,7 +831,6 @@ int execute_program(char *id, char *filename) //학생답안과 정답을 실행
 			return false; //0점 리턴
 		}
 	}
-
 	close(fd);
 
 	return compare_resultfile(std_fname, ans_fname); //정답과 학생답안 비교
@@ -906,15 +909,20 @@ int compare_resultfile(char *file1, char *file2) //학생 답안과 정답 결�
 
 void redirection(char *command, int new, int old)//stdout, stderr를 화면에 출력하지 않기 위해 사용 
 {
-	int saved;
+	int saved, saved2;
 
 	saved = dup(old);
-	dup2(new, old);
+	saved2 = dup(STDERR);
+	dup2(new, old); //old를 new에 출력
+	dup2(new, STDERR); //에러도 new에 출력
 
 	system(command); //command 실행
 
-	dup2(saved, old);
+	dup2(saved, old); //원상복구
+	dup2(saved2, STDERR);
+
 	close(saved);
+	close(saved2);
 }
 
 int get_file_type(char *filename)	//get file type : c or txt
