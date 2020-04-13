@@ -57,8 +57,9 @@ pid_t inBackground(char *name); //학생답안의 프로그램이 실행중인�
 double check_error_warning(char *filename);//애러면 0점, warning이면 감점된 점수 리턴
 int compare_resultfile(char *file1, char *file2); //프로그램 문제 학생 답안과 정답 결과를 비교하여 채점
 
+void do_mOption(char *filename); //m옵션 실행 함수
 void do_iOption(char (*ids)[FILELEN]); //i옵션 실행 함수
-int is_exist(char (*src)[FILELEN], char *target);
+int is_exist(char (*src)[FILELEN], char *target); //i옵션을 적용하는 학번인지 검사하여 맞으면 true리턴
 
 int is_thread(char *qname); //해당 문제번호가 쓰레드 옵션을 요청한 파일인지
 void redirection(char *command, int newfd, int oldfd); //command실행시 stdout, stderr를 화면에 출력하지 않기 위해 사용

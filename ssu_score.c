@@ -42,8 +42,10 @@ void ssu_score(int argc, char *argv[]) //사실상 메인함수
 	}
 
 	memset(saved_path, 0, BUFLEN);	//initialize local parameter
-	strcpy(stuDir, argv[1]);
-	strcpy(ansDir, argv[2]);
+	if(argc >= 3 && strcmp(argv[1], "-i") != 0){
+		strcpy(stuDir, argv[1]);
+		strcpy(ansDir, argv[2]);
+	}
 
 	if(!check_option(argc, argv))	//if it is out of form, throw exception.
 		exit(1);
@@ -74,7 +76,7 @@ void ssu_score(int argc, char *argv[]) //사실상 메인함수
 	set_scoreTable(saved_path);	//set score table
 	set_idTable();	//set scoring result table
 
-	if(mOption) //m옵션 실행
+	if(mOption)  //m옵션 실행
 		do_mOption(saved_path);
 
 	printf("grading student's test papers..\n");
@@ -147,15 +149,49 @@ int check_option(int argc, char *argv[]) //옵션을 체크하고 인자를 처�
 	return true;
 }
 
-void do_mOption(char *curDir) //m옵션 실행
+void do_mOption(char *filename) //m옵션 실행
 {
-	//write_scoreTable 호출
+	char input[FILELEN];
+	char tmp[FILELEN];
+	int i;
+	int find = false;
+	double score;
+
+	while(1) {
+		printf("Input question's number to modify >> ");	
+		scanf("%s", input);
+
+		if(!strcmp(input, "no"))
+			break;
+
+		i = 0;
+		while(strcmp(score_table[i].qname, "")) {//문제 번호가 없을 때까지 탐색
+			memset(tmp, 0, sizeof(tmp));
+			memcpy(tmp, score_table[i].qname, strlen(score_table[i].qname) - strlen(strrchr(score_table[i].qname, '.'))); //확장자 제외하고 저장
+			if(!strcmp(input, tmp)) {  //일치하는 문제번호를 찾았다면
+				find = true;	//체크 후 루프 탈출
+				break;
+			}
+			i++;
+		}
+
+		if(find == true) { // 찾았을 때
+			printf("Current score : %.2lf\n", score_table[i].score);
+			printf("New score : ");
+			scanf("%lf", &score);
+			score_table[i].score = score;
+		}
+	}
+
+	strcat(filename, "/score_table.csv");	
+	write_scoreTable(filename);
 }
 
 void do_iOption(char (*ids)[FILELEN]) //i옵션 실행
 {
 	FILE *fp;
 	char tmp[BUFLEN];
+	char ques[QNUM][FILELEN];
 	int i = 0;
 	char *p, *saved;
 
@@ -164,10 +200,16 @@ void do_iOption(char (*ids)[FILELEN]) //i옵션 실행
 		return;
 	}
 
-	fscanf(fp, "%s\n", tmp);  //문제가 적혀있는 첫 행 제외
+	fscanf(fp, "%s\n", tmp);  //문제가 적혀있는 첫 행을 가져와서
+	p = strtok(tmp, ",");
+	strcpy(ques[i++], p); //첫 번째 문제를 ques배열에 저장한다
+	while((p = strtok(NULL, ",")) != NULL)
+		if(strcmp(p, "sum") != 0) //문제 번호만 저장하기 위해
+			strcpy(ques[i++], p); //ques배열에 저장한다
 
 	while(fscanf(fp, "%s\n", tmp) != EOF) //학생 한 명의 점수 가져오기
 	{
+		i = 0;
 		p = strtok(tmp, ","); //문제 하나하나의 점수 가져오기
 
 		if(!is_exist(ids, p)) //i옵션으로 보고자하는 학생인지
@@ -177,17 +219,16 @@ void do_iOption(char (*ids)[FILELEN]) //i옵션 실행
 
 		int first = false;
 		while((p = strtok(NULL, ",")) != NULL) { //문제별 점수를 하나씩 가져온다.
-			if(!strcmp(p, "0")) { //0점일 경우 해당 문제 출력
+			if(!strcmp(p, "0") && strcmp(ques[i],"")) { //0점일 경우 해당 문제 출력
 				if(!first) 
-					printf("%s", score_table[i].qname);
+					printf("%s", ques[i]);
 				else
-					printf(", %s", score_table[i].qname);
+					printf(", %s", ques[i]);
 				first = true; //첫 번째 오답 문제 출력에 ,를 제외하기 위함
 			}
 			i++;
 		}			
 		printf("\n");
-		i = 0;
 	}
 	fclose(fp);
 }
@@ -616,7 +657,7 @@ int score_blank(char *id, char *filename) //해당 빈칸문제 채점 시작
 
 		strcpy(a_answer, get_answer(fd_ans, a_answer)); //정답 중 하나를 가져옴
 
-		if(!strcmp(a_answer, ""))
+		if(!strcmp(a_answer, "")) //더 비교할 정답이 없으면 종료
 			break;
 
 		strcpy(a_answer, ltrim(rtrim(a_answer))); //정답의 앞뒤 공백 제거
@@ -642,14 +683,14 @@ int score_blank(char *id, char *filename) //해당 빈칸문제 채점 시작
 
 		compare_tree(std_root, ans_root, &result); //학생정답과 답안의 결과 계산
 
-		if(result == true){ //정답이 일치하면 1점
+		if(result == true){ //둘이 일치하면 정답
 			close(fd_std);
 			close(fd_ans);
 
 			if(std_root != NULL)
-				free_node(std_root);
+				free_node(std_root); //트리에 할당된 메모리 해제
 			if(ans_root != NULL)
-				free_node(ans_root);
+				free_node(ans_root); //트리에 할당된 메모리 해제
 			return true;
 
 		}
@@ -666,7 +707,7 @@ int score_blank(char *id, char *filename) //해당 빈칸문제 채점 시작
 	return false;
 }
 
-double score_program(char *id, char *filename) //TODO
+double score_program(char *id, char *filename) //filename의 프로그램 문제 채점하여 맞을경우 1, 틀릴경우 0, 감점이 있을 경우 감점된 점수 리턴
 {
 	//컴파일 시 warning은 -0.1점, 에러는 0점
 	double compile;
@@ -942,7 +983,7 @@ void rmdirs(const char *path) //디렉토리 삭제 함수
 	struct dirent *dirp;
 	struct stat statbuf;
 	DIR *dp;
-	char tmp[50];
+	char tmp[257];
 
 	if((dp = opendir(path)) == NULL) //디렉토리 오픈
 		return;
